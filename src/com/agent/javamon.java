@@ -19,21 +19,18 @@ import java.net.InetSocketAddress;
 
 // The Java monitoring agent can be used to monitor heap memory usage and uptime
 // for a JVM process. It exposes an HTTP endpoint compatible with Prometheus.
-public final class javamon extends Thread implements CharSequence{
+public final class javamon extends Thread{
 
    private final byte[] b;
-   private char[] cvalue;
    private final String host;
    private ServerSocket ss;
    private final int port;
-   private int len, start, end, count;
    private boolean sh;
 
    public javamon(String host, int port){
       this.host = host;
       this.port = port;
-      b = new byte[0x1000];
-      cvalue = new char[180];
+      b = new byte[3000];
    }
 
    // The main method, if javamon is used as a wrapper
@@ -78,7 +75,7 @@ public final class javamon extends Thread implements CharSequence{
       OutputStream os;
       Runtime run = Runtime.getRuntime();
       byte[] buf = b;
-      int ii, rr, zz, oo, hdr, mthd;
+      int ii, rr, zz, oo, hdr, mthd, len, start, end;
       boolean http11, eol;
       while(!sh){
          try{
@@ -93,7 +90,7 @@ public final class javamon extends Thread implements CharSequence{
                   sock = ss.accept();
                   mthd = -1;
                   http11 = false;
-                  len = ii = 0;
+                  len = ii = end = 0;
                   sock.setSoTimeout(10000);
                   sock.setTcpNoDelay(true);
                   is = sock.getInputStream();
@@ -114,7 +111,7 @@ LN:                  while(true){
                            start = 0;
                         }
                         try{
-                           if((oo = is.read(buf, len, 2048 - len)) <= 0)
+                           if((oo = is.read(buf, len, 3000 - len)) <= 0)
                               break;
                         }catch(SocketTimeoutException ex){
                            break;
@@ -134,18 +131,27 @@ LN:                  while(true){
                      if(ii - oo < 8){
                         if(mthd < 0)
                            continue;
-                        if(mthd == 0){
-                           write(os, http11, 0x343034, "Not found", 9);
+                        if(mthd == 0){ // HTTP 404 Not found
+                           buf[0] = 0x4E;
+                           buf[1] = buf[5] = 0x6F;
+                           buf[2] = 0x74;
+                           buf[3] = 0x20;
+                           buf[4] = 0x66;
+                           buf[6] = 0x75;
+                           buf[7] = 0x6E;
+                           buf[8] = 0x64;
+                           write(os, http11, 0x343034, 9);
                            break;
                         }
                         hdr = 0x323030; // HTTP 200
-                        count = 0;
-                        mm("#TYPE heap_size_bytes gauge\nheap_size_bytes ", run.totalMemory());
-                        mm("\n#TYPE heap_free_bytes gauge\nheap_free_bytes ", run.freeMemory());
-                        mm("\n#TYPE uptime_ms counter\nuptime_ms ", (System.currentTimeMillis() - t0) / 1000);
-                        zz = count;
-                        cvalue[zz++] = cvalue[zz++] = '\n';
-                        write(os, http11, hdr, this, zz); // Write the HTTP response
+                        zz = mm(
+                                mm(
+                                   mm(0, "#TYPE heap_size_bytes gauge\nheap_size_bytes ", run.totalMemory()),
+                                "\n#TYPE heap_free_bytes gauge\nheap_free_bytes ", run.freeMemory()),
+                             "\n#TYPE uptime_sec counter\nuptime_sec ", (System.currentTimeMillis() - t0) / 1000
+                           );
+                        buf[zz++] = buf[zz++] = 10;
+                        write(os, http11, hdr, zz); // Write the HTTP response
                         break;
                      }
                      if((buf[oo++] << 24 | buf[oo++] << 16 | buf[oo++] << 8 | buf[oo++]) != 0x47455420) // "GET "
@@ -197,10 +203,10 @@ LN:                  while(true){
    }
 
    // Write the HTTP response
-   private final void write(OutputStream os, boolean http11, int hdr, CharSequence msg, int mlen) throws Exception{
+   private final void write(OutputStream os, boolean http11, int hdr, int mlen) throws Exception{
       String str;
       byte[] buf = b;
-      int ii, begin = len, offset = begin;
+      int ii, begin, offset = begin = mlen;
 
       // HTTP/1.X NNN MM
       buf[offset++] = (byte)'H';
@@ -247,13 +253,11 @@ LN:                  while(true){
       }
       buf[offset++] = (byte)'\r';
       buf[offset++] = (byte)'\n';
-      ii = 0;
-      while(ii < mlen)
-         buf[offset++] = (byte)msg.charAt(ii++);
+      System.arraycopy(buf, 0, buf, offset, mlen);
       ii = 0;
       while(true)
          try{
-            os.write(buf, begin + ii, offset - begin - ii);
+            os.write(buf, begin + ii, offset + mlen - begin - ii);
             break;
          }catch(InterruptedIOException ex){
             ii += ex.bytesTransferred;
@@ -261,39 +265,18 @@ LN:                  while(true){
    }
 
    // Add a metric to the current report
-   private final void mm(String str, long ii){
-      long jj = ii & 0xFFFFFFFFFFL; // ~1 Tb / ~30 years
+   private final int mm(int offset, String str, long ii){
+      long jj = ii & 0xFFFFFFFFFFL; // ~1 Tb
       int llen = jj <= 9 ? 1 : jj <= 99 ? 2 : jj <= 999 ? 3 : jj <= 9999 ? 4 : jj <= 99999 ? 5 : jj <= 999999 ? 6 : jj <= 9999999 ? 7 : jj <= 99999999 ? 8 : jj <= 999999999 ? 9 : jj <= 9999999999L ? 10 : jj <= 99999999999L ? 11 : jj <= 999999999999L ? 12 : 13;
-      int slen = str.length(), newCount = count + slen + llen, newSize = newCount + 2;
-      if(newSize > cvalue.length){
-         int newcapacity = (cvalue.length + 1) << 1;
-         if(newSize > newcapacity)
-            newcapacity = newSize;
-         char[] newval = new char[newcapacity];
-         System.arraycopy(cvalue, 0, newval, 0, count);
-         cvalue = newval;
-      }
-      char[] lval = cvalue;
-      str.getChars(0, slen, lval, count);
-      count = newCount;
+      int slen = str.length(), yy = offset, newCount = yy + slen + llen, xx = 0;
+      byte[] buf = b;
+      while(xx < slen)
+         buf[yy++] = (byte)str.charAt(xx++);
+      yy = newCount;
       while(llen-- > 0){
-         lval[--newCount] = (char)(0x30 + (int)(jj % 10));
+         buf[--newCount] = (byte)(0x30 + (int)(jj % 10));
          jj /= 10;
       }
-   }
-
-   // Returns the char value at the specified index
-   public final char charAt(int index){
-      return cvalue[index];
-   }
-
-   // Create a subsequence of this sequence, defined in the CharSequence interface (not used in javamon)
-   public final CharSequence subSequence(int start, int end){
-      return null;
-   }
-
-   // The length of the character sequence, defined in the CharSequence interface (not used in javamon)
-   public final int length(){
-      return 0;
+      return yy;
    }
 }
