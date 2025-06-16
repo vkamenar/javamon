@@ -1,3 +1,10 @@
+// Permission is hereby granted, free of charge, to any person obtaining a copy of this software
+// and associated documentation files, to deal in the Software without restriction, including
+// without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense,
+// and/or sell copies of the Software, and to permit persons to whom the Software is furnished
+// to do so, subject to the following condition: This copyright and permission notice shall be
+// included in all copies or substantial portions of the Software.
+// Copyright Vladimir Kamenar, 2025
 package com.agent;
 
 import java.io.InputStream;
@@ -10,7 +17,8 @@ import java.net.SocketTimeoutException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 
-// The Java monitoring agent
+// The Java monitoring agent can be used to monitor heap memory usage and uptime
+// for a JVM process. It exposes an HTTP endpoint compatible with Prometheus.
 public final class javamon extends Thread implements CharSequence{
 
    private final byte[] b;
@@ -28,7 +36,7 @@ public final class javamon extends Thread implements CharSequence{
       cvalue = new char[180];
    }
 
-   // The main method, if javamon is used as a java agent
+   // The main method, if javamon is used as a wrapper
    public static final void main(String[] args) throws Exception{
 
       // Parse the configuration parameters: host, port and main class
@@ -47,16 +55,15 @@ public final class javamon extends Thread implements CharSequence{
       javamon jm = new javamon(host, xx);
       jm.start();
 
-      // If a main class is defined, try to invoke its main() method and
-      // pass all the command line parameters, if any
+      // If a main class is defined, try to invoke its main() method and pass all the command line parameters, if any
       if(main != null){
          Class.forName(main).getMethod("main", new Class[]{String[].class}).invoke(null, new Object[]{args});
-         jm.shutdown(); // stop the javamon gracefully
+         jm.shut(); // stop the javamon gracefully
       }
    }
 
    // Signal the HTTP interface to stop gracefully
-   public final void shutdown(){
+   public final void shut(){
       sh = true;
       try{
          ss.close();
@@ -135,7 +142,7 @@ LN:                  while(true){
                         count = 0;
                         mm("#TYPE heap_size_bytes gauge\nheap_size_bytes ", run.totalMemory());
                         mm("\n#TYPE heap_free_bytes gauge\nheap_free_bytes ", run.freeMemory());
-                        mm("\n#TYPE uptime_ms counter\nuptime_ms ", System.currentTimeMillis() - t0);
+                        mm("\n#TYPE uptime_ms counter\nuptime_ms ", (System.currentTimeMillis() - t0) / 1000);
                         zz = count;
                         cvalue[zz++] = cvalue[zz++] = '\n';
                         write(os, http11, hdr, this, zz); // Write the HTTP response
