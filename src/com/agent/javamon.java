@@ -21,7 +21,6 @@ import java.net.InetSocketAddress;
 // for a JVM process. It exposes an HTTP endpoint compatible with Prometheus.
 public final class javamon extends Thread{
 
-   private final byte[] b;
    private final String host;
    private ServerSocket ss;
    private final int port;
@@ -30,7 +29,6 @@ public final class javamon extends Thread{
    public javamon(String host, int port){
       this.host = host;
       this.port = port;
-      b = new byte[3000];
    }
 
    // The main method, if javamon is used as a wrapper
@@ -74,16 +72,13 @@ public final class javamon extends Thread{
       InputStream is;
       OutputStream os;
       Runtime run = Runtime.getRuntime();
-      byte[] buf = b;
+      byte[] buf = new byte[3000];
       int ii, rr, zz, oo, hdr, mthd, len, start, end;
       boolean http11, eol;
       while(!sh){
          try{
             (ss = new ServerSocket()).setReuseAddress(true);
-            InetAddress iaddr = null;
-            if(host != null)
-               iaddr = InetAddress.getByName(host);
-            ss.bind(new InetSocketAddress(iaddr, port));
+            ss.bind(new InetSocketAddress(host != null ? InetAddress.getByName(host) : null, port));
             while(!sh){
                sock = null;
                try{
@@ -140,18 +135,18 @@ LN:                  while(true){
                            buf[6] = 0x75;
                            buf[7] = 0x6E;
                            buf[8] = 0x64;
-                           write(os, http11, 0x343034, 9);
+                           write(os, http11, 0x343034, buf, 9);
                            break;
                         }
                         hdr = 0x323030; // HTTP 200
-                        zz = mm(
-                                mm(
-                                   mm(0, "#TYPE heap_size_bytes gauge\nheap_size_bytes ", run.totalMemory()),
+                        zz = mm(buf,
+                                mm(buf,
+                                   mm(buf, 0, "#TYPE heap_size_bytes gauge\nheap_size_bytes ", run.totalMemory()),
                                 "\n#TYPE heap_free_bytes gauge\nheap_free_bytes ", run.freeMemory()),
                              "\n#TYPE uptime_sec counter\nuptime_sec ", (System.currentTimeMillis() - t0) / 1000
                            );
                         buf[zz++] = buf[zz++] = 10;
-                        write(os, http11, hdr, zz); // Write the HTTP response
+                        write(os, http11, hdr, buf, zz); // Write the HTTP response
                         break;
                      }
                      if((buf[oo++] << 24 | buf[oo++] << 16 | buf[oo++] << 8 | buf[oo++]) != 0x47455420) // "GET "
@@ -203,9 +198,8 @@ LN:                  while(true){
    }
 
    // Write the HTTP response
-   private final void write(OutputStream os, boolean http11, int hdr, int mlen) throws Exception{
+   private static final void write(OutputStream os, boolean http11, int hdr, byte[] buf, int mlen) throws Exception{
       String str;
-      byte[] buf = b;
       int ii, begin, offset = begin = mlen;
 
       // HTTP/1.X NNN MM
@@ -265,11 +259,10 @@ LN:                  while(true){
    }
 
    // Add a metric to the current report
-   private final int mm(int offset, String str, long ii){
+   private static final int mm(byte[] buf, int offset, String str, long ii){
       long jj = ii & 0xFFFFFFFFFFL; // ~1 Tb
       int llen = jj <= 9 ? 1 : jj <= 99 ? 2 : jj <= 999 ? 3 : jj <= 9999 ? 4 : jj <= 99999 ? 5 : jj <= 999999 ? 6 : jj <= 9999999 ? 7 : jj <= 99999999 ? 8 : jj <= 999999999 ? 9 : jj <= 9999999999L ? 10 : jj <= 99999999999L ? 11 : jj <= 999999999999L ? 12 : 13;
       int slen = str.length(), yy = offset, newCount = yy + slen + llen, xx = 0;
-      byte[] buf = b;
       while(xx < slen)
          buf[yy++] = (byte)str.charAt(xx++);
       yy = newCount;
