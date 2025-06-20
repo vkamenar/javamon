@@ -52,7 +52,7 @@ This means that by default it will be accessible only if Prometheus is running o
 
 ## Java library
 
-The following sample shows hot to use javamon as a library (API):
+The following sample shows how to use javamon as a library (API):
 
 ```
 import com.agent.javamon;
@@ -74,4 +74,4 @@ public class MyTestClass{
 }
 ```
 
-A more complete example usingis javamon as a wrapper is available [here](/test/TestAPI.java).  
+A more complete example using javamon as a wrapper is available [here](/test/TestAPI.java).  
