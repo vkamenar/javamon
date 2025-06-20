@@ -1,12 +1,19 @@
 # javamon
 
-Javamon is a lightweight monitoring agent for JVM processes. It can be used as a library or a wrapper.
+Javamon is a lightweight JVM monitoring agent. It can be used as a Java library or a wrapper (launcher).
 In the latter case there is no need to modify the target Java application source code. Javamon exposes
 an HTTP endpoint compatible with [Prometheus](https://github.com/prometheus). The reference implementation
 has the following metrics:  
 
 * Uptime in seconds
-* Heap memory usage in bytes (total size and free size)  
+* Heap memory usage in bytes (total size and free size)
+
+More metrics can be added. For example, the [source code](/src/com/agent/javamon.java#L142-L148)
+shows how to include the active user threads count.  
+
+A simple Grafana dashboard is [available](/dashboard_javamon.json):
+![javamon dashboard for Grafana](https://vkamenar.github.io/javamon/dashboard_javamon.png)
+
 
 ## Lightweight monitor
 
@@ -14,7 +21,9 @@ Every monitoring solution introduces some overhead in terms of memory, CPU and o
 Javamon pretends to be as lightweight as possible while relying on standard Java features only. Javamon
 is implemented as a single class file, without any external dependencies. The jar file size is less than
 4Kb. Javamon creates only one thread. It doesn't impact Garbage Collection (GC) activity because it
-doesn't create any additional objects during normal operation.  
+doesn't create any additional objects during normal operation. If the HTTP listener can't start because
+the port is busy or for any other reason, javamon will retry listening after 10s. These retries do
+produce minor GC activity.  
 
 ## Wrapper
 
@@ -39,4 +48,30 @@ The following configuration parameters are supported by the javamon wrapper:
 
 For security reasons, the default javamon host is not `0.0.0.0`, but `127.0.0.1`. Therefore, if the
 `jm.host` configuration parameter is missing or empty, the HTTP endpoint will be bound to localhost.
-This means that by default it will be accessible only if Prometheus is running on the same host.
+This means that by default it will be accessible only if Prometheus is running on the same host.  
+
+## Java library
+
+The following sample shows hot to use javamon as a library (API):
+
+```
+import com.agent.javamon;
+
+public class MyTestClass{
+
+   public static void main(String[] args){
+
+      // Launch the HTTP endpoint: http://127.0.0.1:9091/metrics
+      javamon jm = new javamon("127.0.0.1", 9091);
+      jm.start();
+
+      // The main loop
+      // ...
+
+      // Signal the HTTP endpoint to stop gracefully before exiting
+      jm.shut();
+   }
+}
+```
+
+A more complete example usingis javamon as a wrapper is available [here](/test/TestAPI.java).  
