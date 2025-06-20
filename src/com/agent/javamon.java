@@ -139,11 +139,13 @@ LN:                  while(true){
                            break;
                         }
                         hdr = 0x323030; // HTTP 200
-                        zz = mm(buf,
+                        zz = //mm(buf, // uncomment to add thread count
                                 mm(buf,
-                                   mm(buf, 0, "#TYPE heap_size_bytes gauge\nheap_size_bytes ", run.totalMemory()),
-                                "\n#TYPE heap_free_bytes gauge\nheap_free_bytes ", run.freeMemory()),
-                             "\n#TYPE uptime_sec counter\nuptime_sec ", (System.currentTimeMillis() - t0) / 1000
+                                   mm(buf,
+                                      mm(buf, 0, "#TYPE heap_size_bytes gauge\nheap_size_bytes ", run.totalMemory()),
+                                   "\n#TYPE heap_free_bytes gauge\nheap_free_bytes ", run.freeMemory()),
+                                "\n#TYPE uptime_sec counter\nuptime_sec ", (System.currentTimeMillis() - t0) / 1000
+                             //), "\n#TYPE threads gauge\nthreads ", getThreadGroup().activeCount() // uncomment to add thread count
                            );
                         buf[zz++] = buf[zz++] = 10;
                         write(os, http11, hdr, buf, zz); // Write the HTTP response
@@ -178,7 +180,8 @@ LN:                  while(true){
                   }
                }
             }
-         }catch(Exception ex){ /* NOOP */
+         }catch(Exception ex){
+            System.err.print("Error starting the javamon listener. Port busy? Retrying in 10s.\r\n");
          }finally{
             try{
                ss.close();
