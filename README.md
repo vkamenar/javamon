@@ -5,11 +5,11 @@ In the latter case there is no need to modify the target Java application source
 an HTTP endpoint compatible with [Prometheus](https://github.com/prometheus), an open source monitoring system.
 The reference implementation has the following metrics:  
 
-| Metric name     | Metric type | Units   | Description                                                                     |
-| --------------- | ----------- | ------- | --------------------------------------------------------------------------------|
-| heap_size_bytes | gauge       | bytes   | Current JVM heap size                                                           |
-| heap_free_bytes	| gauge       | bytes   | Bytes currently available in the Java heap                                      |
-| uptime_sec      | counter     | seconds | Seconds since last javamon restart (normally this value matches the JVM uptime) |
+| Metric name     | Type    | Units   | Description                                                                     |
+| --------------- | ------- | ------- | --------------------------------------------------------------------------------|
+| heap_size_bytes | gauge   | bytes   | Current JVM heap size                                                           |
+| heap_free_bytes	| gauge   | bytes   | Bytes currently available in the Java heap                                      |
+| uptime_sec      | counter | seconds | Seconds since last javamon restart (normally this value matches the JVM uptime) |
 
 More metrics can be added. For example, the [source code](/src/com/agent/javamon.java#L142-L148)
 shows how to include the active user threads count.  
@@ -54,6 +54,8 @@ For security reasons, the default javamon host is not `0.0.0.0`, but `127.0.0.1`
 This means that by default it will be accessible only if Prometheus is running on the same host.  
 
 ## Java library
+
+Please, check the [javamon javadoc](https://vkamenar.github.io/javamon/javadoc.htm).  
 
 The following sample shows how to use javamon as a library (API):
 
