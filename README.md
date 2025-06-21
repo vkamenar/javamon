@@ -66,15 +66,12 @@ public class MyTestClass{
 
    public static void main(String[] args){
 
-      // Launch the HTTP endpoint: http://127.0.0.1:9091/metrics
       javamon jm = new javamon("127.0.0.1", 9091);
-      jm.start();
+      jm.start(); // launch the endpoint: http://127.0.0.1:9091/metrics
 
-      // The main loop
-      // ...
+      // The main loop...
 
-      // Signal the HTTP endpoint to stop gracefully before exiting
-      jm.shut();
+      jm.shut(); // signal the endpoint to stop gracefully before exiting
    }
 }
 ```
