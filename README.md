@@ -2,11 +2,14 @@
 
 Javamon is a lightweight JVM monitoring agent. It can be used as a Java library or a wrapper (launcher).
 In the latter case there is no need to modify the target Java application source code. Javamon exposes
-an HTTP endpoint compatible with [Prometheus](https://github.com/prometheus). The reference implementation
-has the following metrics:  
+an HTTP endpoint compatible with [Prometheus](https://github.com/prometheus), an open source monitoring system.
+The reference implementation has the following metrics:  
 
-* Uptime in seconds
-* Heap memory usage in bytes (total size and free size)
+| Metric name     | Metric type | Units   | Description                                                                     |
+| --------------- | ----------- | ------- | --------------------------------------------------------------------------------|
+| heap_size_bytes | gauge       | bytes   | Current JVM heap size                                                           |
+| heap_free_bytes	| gauge       | bytes   | Bytes currently available in the Java heap                                      |
+| uptime_sec      | counter     | seconds | Seconds since last javamon restart (normally this value matches the JVM uptime) |
 
 More metrics can be added. For example, the [source code](/src/com/agent/javamon.java#L142-L148)
 shows how to include the active user threads count.  
