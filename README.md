@@ -1,7 +1,7 @@
 # javamon
 
 Javamon is a lightweight JVM monitoring agent. It can be used as a Java library or a wrapper (launcher).
-In the latter case there is no need to modify the target Java application source code. Javamon exposes
+In the latter case there is no need to modify or recompile the target Java application source code. Javamon exposes
 an HTTP endpoint compatible with [Prometheus](https://github.com/prometheus), an open source monitoring system.
 The reference implementation has the following metrics:  
 
@@ -11,10 +11,10 @@ The reference implementation has the following metrics:
 | heap_free_bytes	| gauge   | bytes   | Bytes currently available in the Java heap                                      |
 | uptime_sec      | counter | seconds | Seconds since last javamon restart (normally this value matches the JVM uptime) |
 
-More metrics can be added. For example, the [source code](/src/com/agent/javamon.java#L142-L148)
+More metrics can be added. For example, the [source code](/src/com/agent/javamon.java#L133-L139)
 shows how to include the active user threads count.  
 
-A simple Grafana dashboard is [available](/dashboard_javamon.json):
+A sample Grafana dashboard is [available](/dashboard_javamon.json):
 ![javamon dashboard for Grafana](https://vkamenar.github.io/javamon/dashboard_javamon.png)
 
 
@@ -33,11 +33,11 @@ produce minor GC activity.
 If javamon is used as a wrapper (or launcher), there is no need to modify or recompile the source code
 of the target Java application. For example, let's suppose the Java application is launched as follows:  
 
-```java -classpath app.jar com.package.myapp var1 var2```
+>java -classpath app.jar com.package.myapp var1 var2
 
 Let's include javamon as a wrapper:
 
-```java -Djm.main=com.package.myapp -classpath app.jar:javamon.jar com.agent.javamon var1 var2```
+>java -Djm.main=com.package.myapp -classpath app.jar:javamon.jar com.agent.javamon var1 var2
 
 **Note:** When using Windows, the jars are separated by ```;``` instead of ```:```.
 
