@@ -9,7 +9,6 @@ package com.agent;
 
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.net.Socket;
 import java.net.ServerSocket;
@@ -31,33 +30,27 @@ public final class javamon extends Thread{
       this.port = port;
    }
 
-   // The main method, if javamon is used as a wrapper
+   // The main method, if javamon is used as a wrapper.
    public static final void main(String[] args) throws Exception{
-
-      // Parse the configuration parameters: host, port and main class
       int xx = 0;
-      String str, host = "127.0.0.1", main = null;
-      if((str = System.getProperty("jm.host")) != null && str.length() > 0)
-         host = str;
+      String str;
       if((str = System.getProperty("jm.port")) != null)
          try{
             xx = Integer.parseInt(str);
          }catch(Exception ex){ /* NOOP */ }
       if(xx <= 0 || xx > 65535)
-         xx = 9091;
-      if((str = System.getProperty("jm.main")) != null && str.length() > 0)
-         main = str;
-      javamon jm = new javamon(host, xx);
+         xx = 9091; // default port
+      javamon jm = new javamon(((str = System.getProperty("jm.host")) != null && str.length() > 0) ? str : "127.0.0.1", xx);
       jm.start();
 
       // If a main class is defined, try to invoke its main() method and pass all the command line parameters, if any
-      if(main != null){
-         Class.forName(main).getMethod("main", new Class[]{String[].class}).invoke(null, new Object[]{args});
-         jm.shut(); // stop the javamon gracefully
+      if((str = System.getProperty("jm.main")) != null && str.length() > 0){
+         Class.forName(str).getMethod("main", new Class[]{String[].class}).invoke(null, new Object[]{args});
+         jm.shut(); // stop javamon gracefully
       }
    }
 
-   // Signal the HTTP interface to stop gracefully
+   // Signal the HTTP interface to stop gracefully.
    public final void shut(){
       sh = true;
       try{
@@ -65,15 +58,15 @@ public final class javamon extends Thread{
       }catch(Exception ex){ /* NOOP */ }
    }
 
-   // The HTTP endpoint
+   // The HTTP endpoint.
    public final void run(){
       long t0 = System.currentTimeMillis();
       Socket sock;
       InputStream is;
       OutputStream os;
       Runtime run = Runtime.getRuntime();
-      byte[] buf = new byte[3000];
-      int ii, rr, zz, oo, hdr, mthd, len, start, end;
+      byte[] buf = new byte[2000];
+      int rr, zz, oo, mthd, len, start, end;
       boolean http11, eol;
       while(!sh){
          try{
@@ -85,13 +78,13 @@ public final class javamon extends Thread{
                   sock = ss.accept();
                   mthd = -1;
                   http11 = false;
-                  len = ii = end = 0;
-                  sock.setSoTimeout(10000);
+                  len = end = 0;
+                  sock.setSoTimeout(10000); // enable SO_TIMEOUT with a 10s timeout to avoid blocking indefinitely
                   sock.setTcpNoDelay(true);
                   is = sock.getInputStream();
                   os = sock.getOutputStream();
                   while(true){
-                     start = ii;
+                     start = end;
                      eol = false;
 LN:                  while(true){
                         zz = start;
@@ -101,12 +94,12 @@ LN:                  while(true){
                               eol = true;
                               break LN;
                            }
-                        if(zz >= 2048){
+                        if(zz >= 1024){
                            System.arraycopy(buf, start, buf, 0, len -= start);
                            start = 0;
                         }
                         try{
-                           if((oo = is.read(buf, len, 3000 - len)) <= 0)
+                           if((oo = is.read(buf, len, 2000 - len)) <= 0)
                               break;
                         }catch(SocketTimeoutException ex){
                            break;
@@ -121,9 +114,8 @@ LN:                  while(true){
                         }catch(Exception ex){ /* NOOP */ }
                         break; // EOF / ERR
                      }
-                     ii = end;
                      oo = start;
-                     if(ii - oo < 8){
+                     if(end - oo < 8){
                         if(mthd < 0)
                            continue;
                         if(mthd == 0){ // HTTP 404 Not found
@@ -138,7 +130,6 @@ LN:                  while(true){
                            write(os, http11, 0x343034, buf, 9);
                            break;
                         }
-                        hdr = 0x323030; // HTTP 200
                         zz = //mm(buf, // uncomment to add thread count
                                 mm(buf,
                                    mm(buf,
@@ -148,22 +139,20 @@ LN:                  while(true){
                              //), "\n#TYPE threads gauge\nthreads ", getThreadGroup().activeCount() // uncomment to add thread count
                            );
                         buf[zz++] = buf[zz++] = 10;
-                        write(os, http11, hdr, buf, zz); // Write the HTTP response
+                        write(os, http11, 0x323030, buf, zz); // Write the HTTP response
                         break;
                      }
                      if((buf[oo++] << 24 | buf[oo++] << 16 | buf[oo++] << 8 | buf[oo++]) != 0x47455420) // "GET "
                         continue;
-                     hdr = rr = mthd = 0;
-                     http11 = buf[ii - 3] == 0x31 || buf[ii - 2] == 0x31;
-                     while(oo < ii && (zz = buf[oo++]) != 0x20 && zz != 0x3F)
+                     start = rr = mthd = 0;
+                     http11 = buf[end - 3] == 0x31 || buf[end - 2] == 0x31;
+                     while(oo < end && (zz = buf[oo++]) != 0x20 && zz != 0x3F)
                         if(zz == 0x2F || zz == 0x5C){
-                           rr = hdr;
-                           hdr = 0;
+                           rr = start;
+                           start = 0;
                         }else
-                           hdr = 31 * hdr + (zz | 0x20); // to lowercase
-                     if(hdr == 0)
-                        hdr = rr;
-                     if(hdr == 0x38F8C0C3) // metrics
+                           start = 31 * start + (zz | 0x20); // to lowercase
+                     if((start == 0 ? rr : start) == 0x38F8C0C3) // metrics
                         mthd = 1;
                   }
                }catch(Exception ex){
@@ -181,7 +170,7 @@ LN:                  while(true){
                }
             }
          }catch(Exception ex){
-            System.err.print("Error starting the javamon listener. Port busy? Retrying in 10s.\r\n");
+            System.err.print("Error starting listener. Port busy? Retrying in 10s\r\n");
          }finally{
             try{
                ss.close();
@@ -189,18 +178,15 @@ LN:                  while(true){
          }
 
          // Retry listening after a delay, in case the port was busy
-         ii = 10;
-         while(ii-- > 0){
-            if(sh)
-               return;
+         end = 10;
+         while(!sh && end-- > 0)
             try{
                sleep(1000);
             }catch(InterruptedException ex){ /* NOOP */ }
-         }
       }
    }
 
-   // Write the HTTP response
+   // Write the HTTP response.
    private static final void write(OutputStream os, boolean http11, int hdr, byte[] buf, int mlen) throws Exception{
       String str;
       int ii, begin, offset = begin = mlen;
@@ -215,7 +201,7 @@ LN:                  while(true){
       buf[offset++] = (byte)(http11 ? '1' : '0');
       buf[offset++] = (byte)' ';
       buf[offset++] = (byte)(hdr >> 16);
-      buf[offset++] = (byte)(hdr >> 8);
+      buf[offset++] = (byte)'0';
       buf[offset++] = (byte)hdr;
       buf[offset++] = (byte)' ';
       if(hdr == 0x323030){ // "200"
@@ -261,18 +247,18 @@ LN:                  while(true){
          }
    }
 
-   // Add a metric to the current report
+   // Add a metric to the current report.
    private static final int mm(byte[] buf, int offset, String str, long ii){
       long jj = ii & 0xFFFFFFFFFFL; // ~1 Tb
       int llen = jj <= 9 ? 1 : jj <= 99 ? 2 : jj <= 999 ? 3 : jj <= 9999 ? 4 : jj <= 99999 ? 5 : jj <= 999999 ? 6 : jj <= 9999999 ? 7 : jj <= 99999999 ? 8 : jj <= 999999999 ? 9 : jj <= 9999999999L ? 10 : jj <= 99999999999L ? 11 : jj <= 999999999999L ? 12 : 13;
-      int slen = str.length(), yy = offset, newCount = yy + slen + llen, xx = 0;
+      int slen = str.length(), newCount = offset + slen + llen, xx = 0;
       while(xx < slen)
-         buf[yy++] = (byte)str.charAt(xx++);
-      yy = newCount;
+         buf[offset++] = (byte)str.charAt(xx++);
+      xx = newCount;
       while(llen-- > 0){
          buf[--newCount] = (byte)(0x30 + (int)(jj % 10));
          jj /= 10;
       }
-      return yy;
+      return xx;
    }
 }
