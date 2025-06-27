@@ -1,0 +1,6 @@
+# Exclude batch files and shell scripts from the language statistics
+*.bat linguist-vendored
+*.sh linguist-vendored
+
+# Exclude when packaging the source code
+/.github export-ignore
