@@ -11,7 +11,7 @@ The reference implementation has the following metrics:
 | heap_free_bytes	| gauge   | bytes   | Bytes currently available in the Java heap                                      |
 | uptime_sec      | counter | seconds | Seconds since last javamon restart (normally this value matches the JVM uptime) |
 
-More metrics can be added. For example, the [source code](/src/com/agent/javamon.java#L133-L139)
+More metrics can be added. For example, the [source code](/src/com/agent/javamon.java#L134-L140)
 shows how to include the active user threads count.  
 
 A sample Grafana dashboard is [available](/dashboard_javamon.json):
@@ -59,18 +59,14 @@ Please, check the [javamon javadoc](https://vkamenar.github.io/javamon/javadoc.h
 
 The following sample shows how to use javamon as a library (API):
 
-```
+```java
 import com.agent.javamon;
 
 public class MyTestClass{
-
    public static void main(String[] args){
-
       javamon jm = new javamon("127.0.0.1", 9091);
       jm.start(); // launch the endpoint: http://127.0.0.1:9091/metrics
-
       // The main loop...
-
       jm.shut(); // signal the endpoint to stop gracefully before exiting
    }
 }
