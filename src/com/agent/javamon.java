@@ -66,6 +66,7 @@ public final class javamon extends Thread{
       OutputStream os;
       Runtime run = Runtime.getRuntime();
       byte[] buf = new byte[2000];
+      String str;
       int rr, zz, oo, mthd, len, start, end;
       boolean http11, eol;
       while(!sh){
@@ -82,8 +83,7 @@ public final class javamon extends Thread{
                   sock.setSoTimeout(10000); // enable SO_TIMEOUT with a 10s timeout to avoid blocking indefinitely
                   sock.setTcpNoDelay(true);
                   is = sock.getInputStream();
-                  os = sock.getOutputStream();
-                  while(true){
+SRV:              while(true){
                      start = end;
                      eol = false;
 LN:                  while(true){
@@ -118,7 +118,8 @@ LN:                  while(true){
                      if(end - oo < 8){
                         if(mthd < 0)
                            continue;
-                        if(mthd == 0){ // HTTP 404 Not found
+                        if(mthd == 0){
+                           mthd = 0x343034; // HTTP 404 Not found
                            buf[0] = 0x4E;
                            buf[1] = buf[5] = 0x6F;
                            buf[2] = 0x74;
@@ -127,10 +128,10 @@ LN:                  while(true){
                            buf[6] = 0x75;
                            buf[7] = 0x6E;
                            buf[8] = 0x64;
-                           write(os, http11, 0x343034, buf, 9);
-                           break;
-                        }
-                        zz = //mm(buf, // uncomment to add thread count
+                           zz = 9;
+                        }else{
+                           mthd = 0x323030; // HTTP 200 OK
+                           zz = //mm(buf, // uncomment to add thread count
                                 mm(buf,
                                    mm(buf,
                                       mm(buf, 0, "#TYPE heap_size_bytes gauge\nheap_size_bytes ", run.totalMemory()),
@@ -138,9 +139,65 @@ LN:                  while(true){
                                 "\n#TYPE uptime_sec counter\nuptime_sec ", (System.currentTimeMillis() - t0) / 1000
                              //), "\n#TYPE threads gauge\nthreads ", getThreadGroup().activeCount() // uncomment to add thread count
                            );
-                        buf[zz++] = buf[zz++] = 10;
-                        write(os, http11, 0x323030, buf, zz); // Write the HTTP response
-                        break;
+                           buf[zz++] = buf[zz++] = 10;
+                        }
+
+                        // HTTP/1.X NNN MM
+                        rr = start = zz;
+                        buf[rr++] = (byte)'H';
+                        buf[rr++] = buf[rr++] = (byte)'T';
+                        buf[rr++] = (byte)'P';
+                        buf[rr++] = (byte)'/';
+                        buf[rr++] = (byte)'1';
+                        buf[rr++] = (byte)'.';
+                        buf[rr++] = (byte)(http11 ? '1' : '0');
+                        buf[rr++] = (byte)' ';
+                        buf[rr++] = (byte)(mthd >> 16);
+                        buf[rr++] = (byte)'0';
+                        buf[rr++] = (byte)mthd;
+                        buf[rr++] = (byte)' ';
+                        if(mthd == 0x323030){ // "200"
+                           buf[rr++] = (byte)'O';
+                           buf[rr++] = (byte)'K';
+                        }else{
+                           buf[rr++] = (byte)'N';
+                           buf[rr++] = (byte)'O';
+                        }
+
+                        // Content-Length: NNNN
+                        str = "\r\nContent-Length: ";
+                        oo = 0;
+                        while(oo < 18)
+                           buf[rr++] = (byte)str.charAt(oo++);
+                        if(zz >= 1000)
+                           buf[rr++] = (byte)((zz % 10000) / 1000 + 0x30);
+                        if(zz >= 100)
+                           buf[rr++] = (byte)((zz % 1000) / 100 + 0x30);
+                        if(zz >= 10)
+                           buf[rr++] = (byte)((zz % 100) / 10 + 0x30);
+                        buf[rr++] = (byte)(zz % 10 + 0x30);
+                        buf[rr++] = (byte)'\r';
+                        buf[rr++] = (byte)'\n';
+
+                        // Connection: close (for HTTP 1.1 only)
+                        if(http11){
+                           str = "Connection: close\r\n";
+                           oo = 0;
+                           while(oo < 19)
+                              buf[rr++] = (byte)str.charAt(oo++);
+                        }
+                        buf[rr++] = (byte)'\r';
+                        buf[rr++] = (byte)'\n';
+                        System.arraycopy(buf, 0, buf, rr, zz);
+                        oo = 0;
+                        os = sock.getOutputStream();
+                        while(true)
+                           try{
+                              os.write(buf, start + oo, rr + zz - start - oo);
+                              break SRV;
+                           }catch(InterruptedIOException ex){
+                              oo += ex.bytesTransferred;
+                           }
                      }
                      if((buf[oo++] << 24 | buf[oo++] << 16 | buf[oo++] << 8 | buf[oo++]) != 0x47455420) // "GET "
                         continue;
@@ -184,67 +241,6 @@ LN:                  while(true){
                sleep(1000);
             }catch(InterruptedException ex){ /* NOOP */ }
       }
-   }
-
-   // Write the HTTP response.
-   private static final void write(OutputStream os, boolean http11, int hdr, byte[] buf, int mlen) throws Exception{
-      String str;
-      int ii, begin, offset = begin = mlen;
-
-      // HTTP/1.X NNN MM
-      buf[offset++] = (byte)'H';
-      buf[offset++] = buf[offset++] = (byte)'T';
-      buf[offset++] = (byte)'P';
-      buf[offset++] = (byte)'/';
-      buf[offset++] = (byte)'1';
-      buf[offset++] = (byte)'.';
-      buf[offset++] = (byte)(http11 ? '1' : '0');
-      buf[offset++] = (byte)' ';
-      buf[offset++] = (byte)(hdr >> 16);
-      buf[offset++] = (byte)'0';
-      buf[offset++] = (byte)hdr;
-      buf[offset++] = (byte)' ';
-      if(hdr == 0x323030){ // "200"
-         buf[offset++] = (byte)'O';
-         buf[offset++] = (byte)'K';
-      }else{
-         buf[offset++] = (byte)'N';
-         buf[offset++] = (byte)'O';
-      }
-
-      // Content-Length: NNNN
-      str = "\r\nContent-Length: ";
-      ii = 0;
-      while(ii < 18)
-         buf[offset++] = (byte)str.charAt(ii++);
-      if(mlen >= 1000)
-         buf[offset++] = (byte)((mlen % 10000) / 1000 + 0x30);
-      if(mlen >= 100)
-         buf[offset++] = (byte)((mlen % 1000) / 100 + 0x30);
-      if(mlen >= 10)
-         buf[offset++] = (byte)((mlen % 100) / 10 + 0x30);
-      buf[offset++] = (byte)(mlen % 10 + 0x30);
-      buf[offset++] = (byte)'\r';
-      buf[offset++] = (byte)'\n';
-
-      // Connection: close (for HTTP 1.1 only)
-      if(http11){
-         str = "Connection: close\r\n";
-         ii = 0;
-         while(ii < 19)
-            buf[offset++] = (byte)str.charAt(ii++);
-      }
-      buf[offset++] = (byte)'\r';
-      buf[offset++] = (byte)'\n';
-      System.arraycopy(buf, 0, buf, offset, mlen);
-      ii = 0;
-      while(true)
-         try{
-            os.write(buf, begin + ii, offset + mlen - begin - ii);
-            break;
-         }catch(InterruptedIOException ex){
-            ii += ex.bytesTransferred;
-         }
    }
 
    // Add a metric to the current report.
