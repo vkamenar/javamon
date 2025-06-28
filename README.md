@@ -5,11 +5,11 @@ In the latter case there is no need to modify or recompile the target Java appli
 an HTTP endpoint compatible with [Prometheus](https://github.com/prometheus), an open source monitoring system.
 The reference implementation has the following metrics:  
 
-| Metric name     | Type    | Units   | Description                                                                     |
-| --------------- | ------- | ------- | --------------------------------------------------------------------------------|
-| heap_size_bytes | gauge   | bytes   | Current JVM heap size                                                           |
-| heap_free_bytes	| gauge   | bytes   | Bytes currently available in the Java heap                                      |
-| uptime_sec      | counter | seconds | Seconds since last javamon restart (normally this value matches the JVM uptime) |
+| Metric name     | Type    | Units   | Description                                                                        |
+| --------------- | ------- | ------- | -----------------------------------------------------------------------------------|
+| heap_size_bytes | gauge   | bytes   | Current JVM heap size                                                              |
+| heap_free_bytes	| gauge   | bytes   | Bytes currently available in the Java heap                                         |
+| uptime_sec      | counter | seconds | Seconds since last javamon restart<br>(Normally this value matches the JVM uptime) |
 
 More metrics can be added. For example, the [source code](/src/com/agent/javamon.java#L126-L132)
 shows how to include the active user threads count.  
@@ -33,13 +33,13 @@ produce minor GC activity.
 If javamon is used as a wrapper (or launcher), there is no need to modify or recompile the source code
 of the target Java application. For example, let's suppose the Java application is launched as follows:  
 
->java -classpath app.jar com.package.myapp var1 var2
+>java -cp app.jar com.package.myapp var1 var2
 
 Let's include javamon as a wrapper:
 
->java -Djm.main=com.package.myapp -classpath app.jar:javamon.jar com.agent.javamon var1 var2
+>java -Djm.main=com.package.myapp -cp app.jar:javamon.jar com.agent.javamon var1 var2
 
-**Note:** When using Windows, the jars are separated by ```;``` instead of ```:```.
+**Note:** When using Windows, the classpath separator is `;` instead of `:`.
 
 The following configuration parameters are supported by the javamon wrapper:
 
