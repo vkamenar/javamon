@@ -1,9 +1,8 @@
-// Permission is hereby granted, free of charge, to any person obtaining a copy of this software
-// and associated documentation files, to deal in the Software without restriction, including
-// without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense,
-// and/or sell copies of the Software, and to permit persons to whom the Software is furnished
-// to do so, subject to the following condition: This copyright and permission notice shall be
-// included in all copies or substantial portions of the Software.
+// Permission is granted, free of charge, to any person obtaining a copy of this software and associated
+// documentation, to deal in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and
+// to permit persons to whom the Software is furnished to do so, subject to the condition that this
+// copyright shall be included in all copies or substantial portions of the Software:
 // Copyright Vladimir Kamenar, 2025
 package com.agent;
 
@@ -16,37 +15,36 @@ import java.net.SocketTimeoutException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 
-// The Java monitoring agent can be used to monitor heap memory usage and uptime
-// for a JVM process. It exposes an HTTP endpoint compatible with Prometheus.
+// The Java monitoring agent exposes an HTTP endpoint compatible with Prometheus.
 public final class javamon extends Thread{
 
-   private final String host;
+   private final String host; // HTTP listener host or IP address
    private ServerSocket ss;
-   private final int port;
-   private boolean sh;
+   private final int port;    // HTTP listener port
+   private boolean sh;        // Signal the HTTP listener to stop
 
    public javamon(String host, int port){
       this.host = host;
       this.port = port;
    }
 
-   // The main method, if javamon is used as a wrapper.
+   // The main method, if javamon is used as a wrapper (launcher).
    public static final void main(String[] args) throws Exception{
-      int xx = 0;
+      int port = 0;
       String str;
       if((str = System.getProperty("jm.port")) != null)
          try{
-            xx = Integer.parseInt(str);
+            port = Integer.parseInt(str);
          }catch(Exception ex){ /* NOOP */ }
-      if(xx <= 0 || xx > 65535)
-         xx = 9091; // default port
-      javamon jm = new javamon(((str = System.getProperty("jm.host")) != null && str.length() > 0) ? str : "127.0.0.1", xx);
+      if(port <= 0 || port > 65535)
+         port = 9091; // default port
+      javamon jm = new javamon((str = System.getProperty("jm.host")) != null && str.length() > 0 ? str : "127.0.0.1", port);
       jm.start();
 
       // If a main class is defined, try to invoke its main() method and pass all the command line parameters, if any
       if((str = System.getProperty("jm.main")) != null && str.length() > 0){
-         Class.forName(str).getMethod("main", new Class[]{String[].class}).invoke(null, new Object[]{args});
-         jm.shut(); // stop javamon gracefully
+         Class.forName(str).getMethod("main", new Class[]{ Class.forName("[Ljava.lang.String;") }).invoke(null, new Object[]{ args });
+         jm.shut(); // stop javamon gracefully before exiting
       }
    }
 
@@ -60,55 +58,49 @@ public final class javamon extends Thread{
 
    // The HTTP endpoint.
    public final void run(){
-      long t0 = System.currentTimeMillis();
+      long t0 = System.currentTimeMillis(); // the starting time (t0) to compute the uptime
       Socket sock;
-      InputStream is;
-      OutputStream os;
-      Runtime run = Runtime.getRuntime();
       byte[] buf = new byte[2000];
-      String str;
+      Runtime run = Runtime.getRuntime();
       int rr, zz, oo, mthd, len, start, end;
-      boolean http11, eol;
+      boolean http11;
       while(!sh){
          try{
             (ss = new ServerSocket()).setReuseAddress(true);
             ss.bind(new InetSocketAddress(host != null ? InetAddress.getByName(host) : null, port));
             while(!sh){
+               http11 = false;
+               len = end = 0;
+               mthd = -1;
                sock = null;
                try{
-                  sock = ss.accept();
-                  mthd = -1;
-                  http11 = false;
-                  len = end = 0;
-                  sock.setSoTimeout(10000); // enable SO_TIMEOUT with a 10s timeout to avoid blocking indefinitely
+                  (sock = ss.accept()).setSoTimeout(10000); // enable SO_TIMEOUT with a 10s timeout to avoid blocking indefinitely
                   sock.setTcpNoDelay(true);
-                  is = sock.getInputStream();
+                  InputStream is = sock.getInputStream();
 SRV:              while(true){
                      start = end;
-                     eol = false;
-LN:                  while(true){
-                        zz = start;
-                        while(zz < len)
-                           if(buf[zz++] == 10){
-                              end = zz;
-                              eol = true;
-                              break LN;
+LN:                  {
+                        while(true){
+                           zz = start;
+                           while(zz < len)
+                              if(buf[zz++] == 10){
+                                 end = zz;
+                                 break LN;
+                              }
+                           if(zz >= 1000){
+                              System.arraycopy(buf, start, buf, 0, len -= start);
+                              start = 0;
                            }
-                        if(zz >= 1024){
-                           System.arraycopy(buf, start, buf, 0, len -= start);
-                           start = 0;
-                        }
-                        try{
-                           if((oo = is.read(buf, len, 2000 - len)) <= 0)
+                           try{
+                              if((oo = is.read(buf, len, 2000 - len)) <= 0)
+                                 break;
+                           }catch(SocketTimeoutException ex){
                               break;
-                        }catch(SocketTimeoutException ex){
-                           break;
-                        }catch(InterruptedIOException ex){
-                           oo = ex.bytesTransferred;
+                           }catch(InterruptedIOException ex){
+                              oo = ex.bytesTransferred;
+                           }
+                           len += oo;
                         }
-                        len += oo;
-                     }
-                     if(!eol){
                         try{
                            sock.setSoLinger(true, 0);
                         }catch(Exception ex){ /* NOOP */ }
@@ -120,24 +112,24 @@ LN:                  while(true){
                            continue;
                         if(mthd == 0){
                            mthd = 0x343034; // HTTP 404 Not found
-                           buf[0] = 0x4E;
-                           buf[1] = buf[5] = 0x6F;
-                           buf[2] = 0x74;
-                           buf[3] = 0x20;
-                           buf[4] = 0x66;
-                           buf[6] = 0x75;
-                           buf[7] = 0x6E;
-                           buf[8] = 0x64;
+                           buf[0] = (byte)'N';
+                           buf[1] = buf[5] = (byte)'o';
+                           buf[2] = (byte)'t';
+                           buf[3] = (byte)' ';
+                           buf[4] = (byte)'f';
+                           buf[6] = (byte)'u';
+                           buf[7] = (byte)'n';
+                           buf[8] = (byte)'d';
                            zz = 9;
                         }else{
                            mthd = 0x323030; // HTTP 200 OK
                            zz = //mm(buf, // uncomment to add thread count
-                                mm(buf,
-                                   mm(buf,
-                                      mm(buf, 0, "#TYPE heap_size_bytes gauge\nheap_size_bytes ", run.totalMemory()),
-                                   "\n#TYPE heap_free_bytes gauge\nheap_free_bytes ", run.freeMemory()),
-                                "\n#TYPE uptime_sec counter\nuptime_sec ", (System.currentTimeMillis() - t0) / 1000
-                             //), "\n#TYPE threads gauge\nthreads ", getThreadGroup().activeCount() // uncomment to add thread count
+                              mm(buf,
+                                 mm(buf,
+                                    mm(buf, 0, "#TYPE heap_size_bytes gauge\nheap_size_bytes ", 44, run.totalMemory()),
+                                 "\n#TYPE heap_free_bytes gauge\nheap_free_bytes ", 45, run.freeMemory()),
+                              "\n#TYPE uptime_sec counter\nuptime_sec ", 37, (System.currentTimeMillis() - t0) / 1000
+                           //), "\n#TYPE threads gauge\nthreads ", 29, getThreadGroup().activeCount() // uncomment to add thread count
                            );
                            buf[zz++] = buf[zz++] = 10;
                         }
@@ -165,7 +157,7 @@ LN:                  while(true){
                         }
 
                         // Content-Length: NNNN
-                        str = "\r\nContent-Length: ";
+                        String str = "\r\nContent-Length: ";
                         oo = 0;
                         while(oo < 18)
                            buf[rr++] = (byte)str.charAt(oo++);
@@ -189,14 +181,13 @@ LN:                  while(true){
                         buf[rr++] = (byte)'\r';
                         buf[rr++] = (byte)'\n';
                         System.arraycopy(buf, 0, buf, rr, zz);
-                        oo = 0;
-                        os = sock.getOutputStream();
+                        OutputStream os = sock.getOutputStream();
                         while(true)
                            try{
-                              os.write(buf, start + oo, rr + zz - start - oo);
+                              os.write(buf, start, rr + zz - start);
                               break SRV;
                            }catch(InterruptedIOException ex){
-                              oo += ex.bytesTransferred;
+                              start += ex.bytesTransferred;
                            }
                      }
                      if((buf[oo++] << 24 | buf[oo++] << 16 | buf[oo++] << 8 | buf[oo++]) != 0x47455420) // "GET "
@@ -227,7 +218,7 @@ LN:                  while(true){
                }
             }
          }catch(Exception ex){
-            System.err.print("Error starting listener. Port busy? Retrying in 10s\r\n");
+            System.err.print("Error listening. Port busy? Retrying\r\n");
          }finally{
             try{
                ss.close();
@@ -244,16 +235,15 @@ LN:                  while(true){
    }
 
    // Add a metric to the current report.
-   private static final int mm(byte[] buf, int offset, String str, long ii){
-      long jj = ii & 0xFFFFFFFFFFL; // ~1 Tb
-      int llen = jj <= 9 ? 1 : jj <= 99 ? 2 : jj <= 999 ? 3 : jj <= 9999 ? 4 : jj <= 99999 ? 5 : jj <= 999999 ? 6 : jj <= 9999999 ? 7 : jj <= 99999999 ? 8 : jj <= 999999999 ? 9 : jj <= 9999999999L ? 10 : jj <= 99999999999L ? 11 : jj <= 999999999999L ? 12 : 13;
-      int slen = str.length(), newCount = offset + slen + llen, xx = 0;
+   private static final int mm(byte[] buf, int off, String str, int slen, long ii){
+      ii &= 0xFFFFFFFFFFL; // ~1 Tb
+      int xx = 0, llen = ii <= 9 ? 1 : ii <= 99 ? 2 : ii <= 999 ? 3 : ii <= 9999 ? 4 : ii <= 99999 ? 5 : ii <= 999999 ? 6 : ii <= 9999999 ? 7 : ii <= 99999999 ? 8 : ii <= 999999999 ? 9 : ii <= 9999999999L ? 10 : ii <= 99999999999L ? 11 : ii <= 999999999999L ? 12 : 13;
       while(xx < slen)
-         buf[offset++] = (byte)str.charAt(xx++);
-      xx = newCount;
+         buf[off++] = (byte)str.charAt(xx++);
+      xx = off += llen;
       while(llen-- > 0){
-         buf[--newCount] = (byte)(0x30 + (int)(jj % 10));
-         jj /= 10;
+         buf[--off] = (byte)(0x30 + (int)(ii % 10));
+         ii /= 10;
       }
       return xx;
    }
