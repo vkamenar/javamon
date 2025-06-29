@@ -14,6 +14,17 @@ The reference implementation has the following metrics:
 More metrics can be added. For example, the [source code](/src/com/agent/javamon.java#L126-L132)
 shows how to include the active user threads count.  
 
+Adding the javamon endpoint to Prometheus (`prometheus.yml`):
+
+```
+scrape-configs:
+  - job_name: 'javamon'
+
+    # Change the IP and port according to the javamon configuration
+    static_configs:
+      - targets: ['127.0.0.1:9091']
+```
+
 A sample Grafana dashboard is [available](/dashboard_javamon.json):
 ![javamon dashboard for Grafana](https://vkamenar.github.io/javamon/dashboard_javamon.png)
 
