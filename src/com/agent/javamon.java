@@ -25,19 +25,17 @@ public final class javamon extends Thread{
 
    public javamon(String host, int port){
       this.host = host;
-      this.port = port;
+      this.port = (port & 0xFFFF0000) != 0 ? 9091 : port; // default port
    }
 
    // The main method, if javamon is used as a wrapper (launcher).
    public static final void main(String[] args) throws Exception{
-      int port = 0;
+      int port = -1;
       String str;
       if((str = System.getProperty("jm.port")) != null)
          try{
             port = Integer.parseInt(str);
          }catch(Exception ex){ /* NOOP */ }
-      if(port <= 0 || port > 65535)
-         port = 9091; // default port
       javamon jm = new javamon((str = System.getProperty("jm.host")) != null && str.length() > 0 ? str : "127.0.0.1", port);
       jm.start();
 
@@ -104,7 +102,7 @@ LN:                  {
                         try{
                            sock.setSoLinger(true, 0);
                         }catch(Exception ex){ /* NOOP */ }
-                        break; // EOF / ERR
+                        break SRV; // EOF / ERR
                      }
                      oo = start;
                      if(end - oo < 8){
