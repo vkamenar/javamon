@@ -179,10 +179,9 @@ LN:                  {
                         buf[rr++] = (byte)'\r';
                         buf[rr++] = (byte)'\n';
                         System.arraycopy(buf, 0, buf, rr, zz);
-                        OutputStream os = sock.getOutputStream();
                         while(true)
                            try{
-                              os.write(buf, start, rr + zz - start);
+                              sock.getOutputStream().write(buf, start, rr + zz - start);
                               break SRV;
                            }catch(InterruptedIOException ex){
                               start += ex.bytesTransferred;
@@ -201,9 +200,7 @@ LN:                  {
                      if((start == 0 ? rr : start) == 0x38F8C0C3) // metrics
                         mthd = 1;
                   }
-               }catch(Exception ex){
-                  if(sh)
-                     return;
+               }catch(Exception ex){ /* NOOP */
                }finally{
                   if(sock != null){
                      try{
@@ -216,7 +213,7 @@ LN:                  {
                }
             }
          }catch(Exception ex){
-            System.err.print("Error listening. Port busy? Retrying\r\n");
+            System.err.print("Port busy? Retrying\r\n");
          }finally{
             try{
                ss.close();
@@ -234,8 +231,7 @@ LN:                  {
 
    // Add a metric to the current report.
    private static final int mm(byte[] buf, int off, String str, int slen, long ii){
-      ii &= 0xFFFFFFFFFFL; // ~1 Tb
-      int xx = 0, llen = ii <= 9 ? 1 : ii <= 99 ? 2 : ii <= 999 ? 3 : ii <= 9999 ? 4 : ii <= 99999 ? 5 : ii <= 999999 ? 6 : ii <= 9999999 ? 7 : ii <= 99999999 ? 8 : ii <= 999999999 ? 9 : ii <= 9999999999L ? 10 : ii <= 99999999999L ? 11 : ii <= 999999999999L ? 12 : 13;
+      int xx = 0, llen = (ii &= 0xFFFFFFFFFFL) <= 9 ? 1 : ii <= 99 ? 2 : ii <= 999 ? 3 : ii <= 9999 ? 4 : ii <= 99999 ? 5 : ii <= 999999 ? 6 : ii <= 9999999 ? 7 : ii <= 99999999 ? 8 : ii <= 999999999 ? 9 : ii <= 9999999999L ? 10 : ii <= 99999999999L ? 11 : ii <= 999999999999L ? 12 : 13; // ~1 Tb
       while(xx < slen)
          buf[off++] = (byte)str.charAt(xx++);
       xx = off += llen;
