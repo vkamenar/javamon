@@ -1,5 +1,5 @@
 #!/bin/sh
-# === CONFIG END ===============================
+# === CONFIG BEGIN =============================
 
 # Javamon host (localhost, if empty)
 JAVAMON_HOST=
