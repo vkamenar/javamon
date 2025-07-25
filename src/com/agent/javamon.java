@@ -104,12 +104,10 @@ LN:                  {
                         }catch(Exception ex){ /* NOOP */ }
                         break SRV; // EOF / ERR
                      }
-                     oo = start;
-                     if(end - oo < 8){
+                     if(end - (oo = start) < 8){
                         if(mthd < 0)
                            continue;
                         if(mthd == 0){
-                           mthd = 0x343034; // HTTP 404 Not found
                            buf[0] = (byte)'N';
                            buf[1] = buf[5] = (byte)'o';
                            buf[2] = (byte)'t';
@@ -120,7 +118,6 @@ LN:                  {
                            buf[8] = (byte)'d';
                            zz = 9;
                         }else{
-                           mthd = 0x323030; // HTTP 200 OK
                            zz = //mm(buf, // uncomment to add thread count
                               mm(buf,
                                  mm(buf,
@@ -142,11 +139,11 @@ LN:                  {
                         buf[rr++] = (byte)'.';
                         buf[rr++] = (byte)(http11 ? '1' : '0');
                         buf[rr++] = (byte)' ';
-                        buf[rr++] = (byte)(mthd >> 16);
+                        buf[rr++] = (byte)(mthd == 0 ? '4' : '2');
                         buf[rr++] = (byte)'0';
-                        buf[rr++] = (byte)mthd;
+                        buf[rr++] = (byte)(mthd == 0 ? '4' : '0');
                         buf[rr++] = (byte)' ';
-                        if(mthd == 0x323030){ // "200"
+                        if(mthd != 0){ // "200"
                            buf[rr++] = (byte)'O';
                            buf[rr++] = (byte)'K';
                         }else{
@@ -159,8 +156,8 @@ LN:                  {
                         oo = 0;
                         while(oo < 18)
                            buf[rr++] = (byte)str.charAt(oo++);
-                        if(zz >= 1000)
-                           buf[rr++] = (byte)((zz % 10000) / 1000 + 0x30);
+                        // if(zz >= 1000)
+                        //    buf[rr++] = (byte)((zz % 10000) / 1000 + 0x30);
                         if(zz >= 100)
                            buf[rr++] = (byte)((zz % 1000) / 100 + 0x30);
                         if(zz >= 10)
