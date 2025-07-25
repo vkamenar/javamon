@@ -1,8 +1,8 @@
 @echo off
 SETLOCAL
-REM === CONFIG END ===============================
+REM === CONFIG BEGIN =============================
 
-REM JRE directory
+REM Java installation directory
 SET JRE_HOME=
 
 REM Javamon host (localhost, if empty)
@@ -18,7 +18,7 @@ REM The command-line parameters for the main class
 SET CMDPARAMS=param1 param2
 
 REM === CONFIG END ===============================
-TITLE Javamon example: wrapper
+TITLE javamon example: wrapper
 PUSHD "%~dp0\.."
 SET JRE=%JRE_HOME%
 IF EXIST "%JRE%\bin\java.exe" GOTO JREFOUND
@@ -41,7 +41,7 @@ ECHO Monitoring endpoint: http://[jm.host]:[jm.port]/metrics
 "%JRE%\bin\java" %CNFG% -classpath test;javamon.jar com.agent.javamon %CMDPARAMS%
 GOTO EXIT
 :JRENOTFOUND
-ECHO Java not found. If you have Java 1.4 or later installed, set the JRE_HOME environment variable to point to where the JRE or JDK is located.
+ECHO Java not found. If you have Java 1.4 or later installed, set JRE_HOME to point to where the JRE or JDK is located.
 :EXIT
 pause
 POPD
