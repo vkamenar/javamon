@@ -1,12 +1,12 @@
 @echo off
 SETLOCAL
-REM === CONFIG END ===============================
+REM === CONFIG BEGIN =======================
 
-REM JRE directory
+REM Java installation directory
 SET JRE_HOME=
 
-REM === CONFIG END ===============================
-TITLE Javamon example: API
+REM === CONFIG END =========================
+TITLE javamon example: API
 PUSHD "%~dp0\.."
 SET JRE=%JRE_HOME%
 IF EXIST "%JRE%\bin\java.exe" GOTO JREFOUND
@@ -24,7 +24,7 @@ IF NOT EXIST "%JRE%\bin\java.exe" GOTO JRENOTFOUND
 "%JRE%\bin\java" -classpath test;javamon.jar TestAPI
 GOTO EXIT
 :JRENOTFOUND
-ECHO Java not found. If you have Java 1.4 or later installed, set the JRE_HOME environment variable to point to where the JRE or JDK is located.
+ECHO Java not found. If you have Java 1.4 or later installed, set JRE_HOME to point to where the JRE or JDK is located.
 :EXIT
 pause
 POPD
