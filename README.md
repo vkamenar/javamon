@@ -11,7 +11,7 @@ The reference implementation has the following metrics:
 | heap_free_bytes	| gauge   | bytes   | Bytes currently available in the Java heap                                         |
 | uptime_sec      | counter | seconds | Seconds since last javamon restart<br>(Normally this value matches the JVM uptime) |
 
-More metrics can be added. For example, the [source code](/src/com/agent/javamon.java#L126-L132)
+More metrics can be added. For example, the [source code](/src/com/agent/javamon.java#L121-L127)
 shows how to include the active user threads count.  
 
 Adding the javamon endpoint to Prometheus (`prometheus.yml`):
