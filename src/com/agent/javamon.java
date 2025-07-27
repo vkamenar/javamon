@@ -85,17 +85,15 @@ LN:                  {
                                  end = zz;
                                  break LN;
                               }
-                           if(zz >= 1000){
-                              System.arraycopy(buf, start, buf, 0, len -= start);
-                              start = 0;
-                           }
+                           System.arraycopy(buf, start, buf, 0, len -= start);
+                           start = 0;
                            try{
                               if((oo = is.read(buf, len, 2000 - len)) <= 0)
                                  break;
                            }catch(SocketTimeoutException ex){
                               break;
                            }catch(InterruptedIOException ex){
-                              oo = ex.bytesTransferred;
+                              oo = ex.bytesTransferred; // only for compatibility with Solaris, if interruptible IO is enabled
                            }
                            len += oo;
                         }
@@ -181,7 +179,7 @@ LN:                  {
                               sock.getOutputStream().write(buf, start, rr + zz - start);
                               break SRV;
                            }catch(InterruptedIOException ex){
-                              start += ex.bytesTransferred;
+                              start += ex.bytesTransferred; // only for compatibility with Solaris, if interruptible IO is enabled
                            }
                      }
                      if((buf[oo++] << 24 | buf[oo++] << 16 | buf[oo++] << 8 | buf[oo++]) != 0x47455420) // "GET "
@@ -189,7 +187,7 @@ LN:                  {
                      start = rr = mthd = 0;
                      http11 = buf[end - 3] == 0x31 || buf[end - 2] == 0x31;
                      while(oo < end && (zz = buf[oo++]) != 0x20 && zz != 0x3F)
-                        if(zz == 0x2F || zz == 0x5C){
+                        if(zz == 0x2F){
                            rr = start;
                            start = 0;
                         }else
