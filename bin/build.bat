@@ -33,7 +33,6 @@ REM Generate the Manifest
 (
 ECHO Manifest-Version: 1.0
 ECHO Main-Class: com.agent.javamon
-ECHO Copyright: 2025
 ECHO Created-By: Vladimir Kamenar
 ECHO.
 ) >classes\javamon.MF

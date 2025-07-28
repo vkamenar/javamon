@@ -35,7 +35,6 @@ RT="$JDK/../jre/lib/rt.jar"
 cat >classes/javamon.MF <<EOL
 Manifest-Version: 1.0
 Main-Class: com.agent.javamon
-Copyright: 2025
 Created-By: Vladimir Kamenar
 
 EOL
