@@ -32,7 +32,7 @@ A sample Grafana dashboard is [available](/dashboard_javamon.json):
 ## Lightweight monitor
 
 Every monitoring solution introduces some overhead in terms of memory, CPU and other system resources.
-Javamon pretends to be as lightweight as possible while relying on standard Java features only. Javamon
+Javamon pretends to be [as lightweight as possible](https://github.com/vkamenar/javamon/discussions/1) while relying on standard Java features only. Javamon
 is implemented as a single class file, without any external dependencies. The jar file size is less than
 4Kb. Javamon creates only one thread. It doesn't impact Garbage Collection (GC) activity because it
 doesn't create any additional objects during normal operation. If the HTTP listener can't start because
