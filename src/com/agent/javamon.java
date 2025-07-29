@@ -157,7 +157,7 @@ LN:                  {
                         // if(zz >= 1000)
                         //    buf[rr++] = (byte)((zz % 10000) / 1000 + 0x30);
                         if(zz >= 100)
-                           buf[rr++] = (byte)((zz % 1000) / 100 + 0x30);
+                           buf[rr++] = (byte)((zz /*% 1000*/) / 100 + 0x30);
                         if(zz >= 10)
                            buf[rr++] = (byte)((zz % 100) / 10 + 0x30);
                         buf[rr++] = (byte)(zz % 10 + 0x30);
