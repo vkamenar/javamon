@@ -20,7 +20,7 @@ Adding the javamon endpoint to Prometheus (`prometheus.yml`):
 scrape-configs:
   - job_name: 'javamon'
 
-    # Change the IP and port according to the javamon configuration
+    # Change the target IP and port according to the javamon configuration
     static_configs:
       - targets: ['127.0.0.1:9091']
 ```
@@ -34,7 +34,7 @@ A sample Grafana dashboard is [available](/dashboard_javamon.json):
 Every monitoring solution introduces some overhead in terms of memory, CPU and other system resources.
 Javamon pretends to be [as lightweight as possible](https://github.com/vkamenar/javamon/discussions/1) while relying on standard Java features only. Javamon
 is implemented as a single class file, without any external dependencies. The jar file size is less than
-4Kb. Javamon creates only one thread. It doesn't impact Garbage Collection (GC) activity.  
+3.5Kb. Javamon creates only one thread. It doesn't impact Garbage Collection (GC) activity.  
 
 ## Wrapper
 
